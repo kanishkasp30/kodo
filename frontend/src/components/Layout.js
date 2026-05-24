@@ -145,9 +145,10 @@ export default function Layout() {
                     <div style={{ paddingLeft: '12px' }}>
                       {[
                         { label: 'Board', icon: '📋', section: 'board' },
-                        { label: 'Snippets', icon: '💻', section: 'snippets' },
-                        { label: 'Wiki', icon: '📄', section: 'wiki' },
-                        { label: '✦ AI Assistant', icon: '', section: 'ai' },
+{ label: 'List view', icon: '📝', section: 'list' },
+{ label: 'Snippets', icon: '💻', section: 'snippets' },
+{ label: 'Wiki', icon: '📄', section: 'wiki' },
+{ label: '✦ AI Assistant', icon: '', section: 'ai' },
                       ].map((item) => (
                         <div
                           key={item.section}
