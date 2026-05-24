@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
@@ -15,6 +16,7 @@ const io = new Server(server, {
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/workspaces', require('./routes/workspaces'));
@@ -24,6 +26,7 @@ app.use('/api/snippets', require('./routes/snippets'));
 app.use('/api/wiki', require('./routes/wiki'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/activity', require('./routes/activity'));
+app.use('/api/upload', require('./routes/upload'));
 
 const connectedUsers = {};
 
