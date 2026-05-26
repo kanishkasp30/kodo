@@ -1,106 +1,135 @@
-const express = require('express');
-const router = express.Router();
-const pool = require('../db');
-const auth = require('../middleware/auth');
+import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
+import { getActivity, getProjects, getWorkspaceMembers } from '../utils/api';
+import io from 'socket.io-client';
 
-router.get('/project/:project_id', auth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT t.*, u.name as assignee_name, u.avatar_color as assignee_color,
-       to_char(t.due_date, 'YYYY-MM-DD') as due_date
-       FROM tasks t
-       LEFT JOIN users u ON t.assignee_id = u.id
-       WHERE t.project_id = $1
-       ORDER BY t.position ASC, t.created_at ASC`,
-      [req.params.project_id]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+const socket = io('http://localhost:5000');
 
-router.post('/', auth, async (req, res) => {
-  const { project_id, title, description, status, priority, assignee_id, due_date, labels } = req.body;
-  try {
-    const result = await pool.query(
-      `INSERT INTO tasks (project_id, title, description, status, priority, assignee_id, due_date, labels, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *,
-       to_char(due_date, 'YYYY-MM-DD') as due_date`,
-      [project_id, title, description, status || 'todo', priority || 'Important', assignee_id, due_date, labels || [], req.user.id]
-    );
-    const task = result.rows[0];
-    const project = await pool.query('SELECT workspace_id FROM projects WHERE id = $1', [project_id]);
-    await pool.query(
-      'INSERT INTO activity_log (workspace_id, project_id, user_id, action, entity_type, entity_name) VALUES ($1, $2, $3, $4, $5, $6)',
-      [project.rows[0].workspace_id, project_id, req.user.id, 'created task', 'task', title]
-    );
-    res.status(201).json(task);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+export default function Activity() {
+  const { theme } = useTheme();
+  const context = useOutletContext();
+  const currentWorkspace = context?.currentWorkspace;
+  const [activity, setActivity] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterProject, setFilterProject] = useState('all');
+  const [filterMember, setFilterMember] = useState('all');
 
-router.put('/:id', auth, async (req, res) => {
-  const { title, description, status, priority, assignee_id, due_date, labels, position } = req.body;
-  try {
-    const result = await pool.query(
-      `UPDATE tasks SET
-        title=$1, description=$2, status=$3, priority=$4,
-        assignee_id=$5, due_date=$6, labels=$7, position=$8,
-        updated_at=NOW()
-       WHERE id=$9 RETURNING *,
-       to_char(due_date, 'YYYY-MM-DD') as due_date`,
-      [title, description, status, priority, assignee_id, due_date, labels, position, req.params.id]
-    );
-    const task = result.rows[0];
-    const project = await pool.query('SELECT workspace_id FROM projects WHERE id = $1', [task.project_id]);
-    await pool.query(
-      'INSERT INTO activity_log (workspace_id, project_id, user_id, action, entity_type, entity_name) VALUES ($1, $2, $3, $4, $5, $6)',
-      [project.rows[0].workspace_id, task.project_id, req.user.id, `moved task to ${status}`, 'task', title]
-    );
-    res.json(task);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+  useEffect(() => {
+    if (currentWorkspace) {
+      fetchAll();
+      socket.emit('join-workspace', currentWorkspace.id);
+    }
+  }, [currentWorkspace]);
 
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM tasks WHERE id = $1', [req.params.id]);
-    res.json({ message: 'Task deleted' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+  const fetchAll = async () => {
+    try {
+      const [activityRes, projectsRes, membersRes] = await Promise.all([
+        getActivity(currentWorkspace.id),
+        getProjects(currentWorkspace.id),
+        getWorkspaceMembers(currentWorkspace.id),
+      ]);
+      setActivity(activityRes.data);
+      setProjects(projectsRes.data);
+      setMembers(membersRes.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-router.get('/:id/comments', auth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT tc.*, u.name as user_name, u.avatar_color
-       FROM task_comments tc
-       JOIN users u ON tc.user_id = u.id
-       WHERE tc.task_id = $1
-       ORDER BY tc.created_at ASC`,
-      [req.params.id]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+  };
 
-router.post('/:id/comments', auth, async (req, res) => {
-  const { content } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO task_comments (task_id, user_id, content) VALUES ($1, $2, $3) RETURNING *',
-      [req.params.id, req.user.id, content]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
+  const getActionColor = (action) => {
+    if (action.includes('created')) return '#0D9E8A';
+    if (action.includes('moved') || action.includes('updated')) return '#F0A500';
+    if (action.includes('deleted')) return '#E8572A';
+    return '#6C5CE7';
+  };
 
-module.exports = router;
+  const filtered = activity.filter(a => {
+    const projectMatch = filterProject === 'all' || String(a.project_id) === filterProject;
+    const memberMatch = filterMember === 'all' || String(a.user_id) === filterMember;
+    return projectMatch && memberMatch;
+  });
+
+  const inputStyle = {
+    background: theme.input,
+    border: `0.5px solid ${theme.inputBorder}`,
+    borderRadius: '8px',
+    padding: '7px 12px',
+    fontSize: '12px',
+    color: theme.text,
+    outline: 'none',
+    fontFamily: 'Inter, sans-serif',
+    colorScheme: 'dark',
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ fontFamily: 'Fraunces, serif', fontSize: '28px', fontWeight: 700, color: theme.text, marginBottom: '4px' }}>
+          Activity feed
+        </div>
+        <div style={{ fontSize: '13px', color: theme.textSecondary }}>
+          Everything happening across your workspace
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center' }}>
+        <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} style={inputStyle}>
+          <option value="all">All projects</option>
+          {projects.map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+        </select>
+        <select value={filterMember} onChange={(e) => setFilterMember(e.target.value)} style={inputStyle}>
+          <option value="all">All members</option>
+          {members.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+        </select>
+        <div style={{ marginLeft: 'auto', fontSize: '12px', color: theme.textMuted }}>
+          {filtered.length} events
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px', color: theme.textMuted }}>Loading...</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px', background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '14px' }}>
+          <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚡</div>
+          <div style={{ fontFamily: 'Fraunces, serif', fontSize: '18px', fontWeight: 700, color: theme.text, marginBottom: '6px' }}>No activity yet</div>
+          <div style={{ fontSize: '13px', color: theme.textMuted }}>Actions across your workspace will appear here</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {filtered.map((item) => (
+            <div key={item.id} style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '12px', padding: '14px 18px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#E8572A', color: '#fff', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {item.user_name?.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', color: theme.text, lineHeight: 1.5, marginBottom: '4px' }}>
+                  <span style={{ fontWeight: 600 }}>{item.user_name}</span>
+                  {' '}
+                  <span style={{ color: theme.textSecondary }}>{item.action}</span>
+                  {item.entity_name && (
+                    <span style={{ fontWeight: 600, color: getActionColor(item.action) }}> {item.entity_name}</span>
+                  )}
+                </div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: theme.textMuted }}>
+                  {formatTime(item.created_at)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
