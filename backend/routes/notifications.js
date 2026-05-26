@@ -43,7 +43,8 @@ router.put('/:id/read', auth, async (req, res) => {
 });
 
 router.post('/', auth, async (req, res) => {
-  const { user_id, title, message, type, link } = req.body;
+  const { title, message, type, link } = req.body;
+  const user_id = req.body.user_id || req.user.id;
   try {
     const result = await pool.query(
       `INSERT INTO notifications (user_id, title, message, type, link)
@@ -52,6 +53,7 @@ router.post('/', auth, async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error('Notification error:', err.message);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });

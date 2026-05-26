@@ -23,7 +23,6 @@ export default function Layout() {
   const { theme, themeName, switchTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [workspaces, setWorkspaces] = useState([]);
   const [currentWorkspace, setCurrentWorkspace] = useState(null);
   const [projects, setProjects] = useState([]);
   const [expandedProject, setExpandedProject] = useState(null);
@@ -53,7 +52,7 @@ export default function Layout() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
-      setUnreadCount(data.filter(n => !n.is_read).length);
+      setUnreadCount(Array.isArray(data) ? data.filter(n => !n.is_read).length : 0);
     } catch (err) {
       console.error(err);
     }
@@ -62,11 +61,9 @@ export default function Layout() {
   const fetchWorkspaces = async () => {
     try {
       const res = await getMyWorkspaces();
-      setWorkspaces(res.data);
       const saved = localStorage.getItem('currentWorkspace');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        setCurrentWorkspace(parsed);
+        setCurrentWorkspace(JSON.parse(saved));
       } else if (res.data.length > 0) {
         setCurrentWorkspace(res.data[0]);
         localStorage.setItem('currentWorkspace', JSON.stringify(res.data[0]));
@@ -101,15 +98,14 @@ export default function Layout() {
         color: isActive(path) ? theme.accent : theme.textSecondary,
         fontSize: '12px', fontWeight: 500,
         transition: 'all 0.15s',
-        position: 'relative',
       }}
       onMouseEnter={(e) => { if (!isActive(path)) e.currentTarget.style.background = 'rgba(128,128,128,0.08)'; }}
       onMouseLeave={(e) => { if (!isActive(path)) e.currentTarget.style.background = 'transparent'; }}
     >
       <span style={{ fontSize: '15px' }}>{icon}</span>
-      {label}
+      <span style={{ flex: 1 }}>{label}</span>
       {badge > 0 && (
-        <span style={{ marginLeft: 'auto', background: '#E8572A', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '1px 5px', borderRadius: '10px', minWidth: '16px', textAlign: 'center' }}>
+        <span style={{ background: '#E8572A', color: '#fff', fontSize: '9px', fontWeight: 700, padding: '1px 5px', borderRadius: '10px', minWidth: '16px', textAlign: 'center' }}>
           {badge}
         </span>
       )}

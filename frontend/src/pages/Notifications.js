@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import io from 'socket.io-client';
@@ -13,29 +13,32 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    fetchNotifications();
-    socket.emit('join-user', user?.id);
-    socket.on('new-notification', (notif) => {
-      setNotifications(prev => [notif, ...prev]);
-      toast(`🔔 ${notif.title}`, { duration: 4000 });
-    });
-    return () => socket.off('new-notification');
-  }, [user]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch('http://localhost:5000/api/notifications', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
-      setNotifications(data);
+      setNotifications(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    if (user?.id) {
+      socket.emit('join-user', user.id);
+      socket.on('new-notification', (notif) => {
+        setNotifications(prev => [notif, ...prev]);
+        toast(`🔔 ${notif.title}`, { duration: 4000 });
+      });
+    }
+    return () => socket.off('new-notification');
+  }, [user, fetchNotifications]);
 
   const markAllRead = async () => {
     try {
@@ -62,6 +65,34 @@ export default function Notifications() {
     }
   };
 
+  const sendTestNotification = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          user_id: user?.id,
+          title: 'Test notification from Kōdo',
+          message: 'This is how real-time notifications look. Your team actions will appear here.',
+          type: 'info',
+        }),
+      });
+      const newNotif = await res.json();
+      if (newNotif && newNotif.id) {
+        setNotifications(prev => [newNotif, ...prev]);
+        toast.success('Notification sent — scroll up to see it');
+      } else {
+        await fetchNotifications();
+        toast.success('Notification sent');
+      }
+    } catch (err) {
+      toast.error('Failed to send notification');
+    }
+  };
+
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -82,7 +113,10 @@ export default function Notifications() {
     }
   };
 
-  const filtered = filter === 'all' ? notifications : filter === 'unread' ? notifications.filter(n => !n.is_read) : notifications;
+  const filtered = filter === 'unread'
+    ? notifications.filter(n => !n.is_read)
+    : notifications;
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
@@ -113,7 +147,7 @@ export default function Notifications() {
             onClick={() => setFilter(f)}
             style={{ background: filter === f ? '#E8572A' : 'transparent', border: `0.5px solid ${filter === f ? '#E8572A' : theme.cardBorder}`, borderRadius: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 600, color: filter === f ? '#fff' : theme.textSecondary, cursor: 'pointer', textTransform: 'capitalize' }}
           >
-            {f} {f === 'unread' && unreadCount > 0 && `(${unreadCount})`}
+            {f} {f === 'unread' && unreadCount > 0 ? `(${unreadCount})` : ''}
           </button>
         ))}
       </div>
@@ -139,7 +173,7 @@ export default function Notifications() {
                 key={notif.id}
                 onClick={() => !notif.is_read && markRead(notif.id)}
                 style={{
-                  background: notif.is_read ? theme.card : theme.card,
+                  background: theme.card,
                   border: `0.5px solid ${notif.is_read ? theme.cardBorder : 'rgba(232,87,42,0.3)'}`,
                   borderLeft: `3px solid ${notif.is_read ? theme.cardBorder : '#E8572A'}`,
                   borderRadius: '12px',
@@ -177,29 +211,12 @@ export default function Notifications() {
       )}
 
       <div style={{ marginTop: '24px', padding: '16px', background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '12px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: theme.textMuted, marginBottom: '8px' }}>Test notification</div>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: theme.textMuted, marginBottom: '6px' }}>Send a test notification</div>
         <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '10px', lineHeight: 1.6 }}>
-          Send yourself a test notification to see how the system works.
+          Click below to send yourself a test notification and see it appear at the top of this page.
         </div>
         <button
-          onClick={async () => {
-            try {
-              await fetch('http://localhost:5000/api/notifications', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-                body: JSON.stringify({
-                  user_id: user?.id,
-                  title: 'Welcome to Kōdo notifications',
-                  message: 'This is how notifications look in real time. Aura and your team will send you updates here.',
-                  type: 'info',
-                }),
-              });
-              fetchNotifications();
-              toast.success('Test notification sent');
-            } catch (err) {
-              toast.error('Failed');
-            }
-          }}
+          onClick={sendTestNotification}
           style={{ background: '#E8572A', border: 'none', borderRadius: '8px', padding: '8px 16px', fontFamily: 'Playfair Display, serif', fontStyle: 'italic', fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}
         >
           Send test notification
