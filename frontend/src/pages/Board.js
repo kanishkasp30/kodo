@@ -30,6 +30,13 @@ const getPriorityStyle = (priority) => {
   }
 };
 
+const formatFileSize = (bytes) => {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export default function Board() {
   const { projectId } = useParams();
   const { user } = useAuth();
@@ -47,6 +54,9 @@ export default function Board() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef(null);
   const commentsEndRef = useRef(null);
   const [newTask, setNewTask] = useState({
     title: '', description: '', priority: 'Important',
@@ -68,6 +78,7 @@ export default function Board() {
   useEffect(() => {
     if (selectedTask) {
       fetchComments(selectedTask.id);
+      fetchAttachments(selectedTask.id);
     }
   }, [selectedTask?.id]);
 
@@ -112,6 +123,56 @@ export default function Board() {
     }
   };
 
+  const fetchAttachments = async (taskId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/attachments/task/${taskId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const data = await res.json();
+      setAttachments(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`http://localhost:5000/api/attachments/task/${selectedTask.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.id) {
+        setAttachments(prev => [data, ...prev]);
+        toast.success('File attached');
+      }
+    } catch (err) {
+      toast.error('Failed to upload file');
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (id) => {
+    try {
+      await fetch(`http://localhost:5000/api/attachments/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      setAttachments(prev => prev.filter(a => a.id !== id));
+      toast.success('Attachment removed');
+    } catch (err) {
+      toast.error('Failed to remove attachment');
+    }
+  };
+
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
     try {
@@ -125,10 +186,7 @@ export default function Board() {
   };
 
   const handleCreateTask = async (status) => {
-    if (!newTask.title.trim()) {
-      toast.error('Enter a task title');
-      return;
-    }
+    if (!newTask.title.trim()) { toast.error('Enter a task title'); return; }
     try {
       await createTask({
         project_id: parseInt(projectId),
@@ -201,6 +259,17 @@ export default function Board() {
     });
   };
 
+  const getFileIcon = (filename) => {
+    const ext = filename?.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '🖼';
+    if (['pdf'].includes(ext)) return '📄';
+    if (['doc', 'docx'].includes(ext)) return '📝';
+    if (['xls', 'xlsx'].includes(ext)) return '📊';
+    if (['zip', 'rar', '7z'].includes(ext)) return '📦';
+    if (['js', 'ts', 'py', 'java', 'cpp', 'go'].includes(ext)) return '💻';
+    return '📎';
+  };
+
   const inputStyle = {
     width: '100%',
     background: theme.input,
@@ -236,9 +305,7 @@ export default function Board() {
               </span>
             </div>
             {presence.slice(0, 3).map((p, i) => (
-              <div key={i} style={{ fontSize: '11px', color: theme.textMuted }}>
-                {p.userName} is here
-              </div>
+              <div key={i} style={{ fontSize: '11px', color: theme.textMuted }}>{p.userName} is here</div>
             ))}
           </div>
         </div>
@@ -302,7 +369,7 @@ export default function Board() {
                         {task.assignee_name && <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: task.assignee_color || '#E8572A', color: '#fff', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={task.assignee_name}>{task.assignee_name?.charAt(0).toUpperCase()}</div>}
                         {task.labels?.slice(0, 2).map((label) => <span key={label} style={{ background: 'rgba(108,92,231,0.15)', color: '#6C5CE7', fontSize: '9px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>{label}</span>)}
                         {isOverdue && <span style={{ background: 'rgba(232,87,42,0.15)', color: '#E8572A', fontSize: '9px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px' }}>overdue</span>}
-                        {task.due_date && <span style={{ fontSize: '10px', color: theme.textMuted, marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{new Date(task.due_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>}
+                        {task.due_date && <span style={{ fontSize: '10px', color: theme.textMuted, marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{new Date(task.due_date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>}
                       </div>
                     </div>
                   );
@@ -315,7 +382,7 @@ export default function Board() {
 
       {selectedTask && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={(e) => { if (e.target === e.currentTarget) setSelectedTask(null); }}>
-          <div style={{ background: theme.sidebar, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '20px', padding: '28px', width: '560px', maxHeight: '85vh', overflowY: 'auto' }}>
+          <div style={{ background: theme.sidebar, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '20px', padding: '28px', width: '580px', maxHeight: '88vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: 'Fraunces, serif', fontSize: '20px', fontWeight: 700, color: theme.text, marginBottom: '4px' }}>{selectedTask.title}</div>
@@ -353,17 +420,47 @@ export default function Board() {
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: theme.textMuted, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                Comments
-                <span style={{ background: 'rgba(128,128,128,0.15)', borderRadius: '10px', padding: '0 6px', fontSize: '10px', color: theme.textMuted }}>{comments.length}</span>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: theme.textMuted, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Attachments <span style={{ background: 'rgba(128,128,128,0.15)', borderRadius: '10px', padding: '0 6px' }}>{attachments.length}</span></span>
+                <div>
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} />
+                  <button onClick={() => fileInputRef.current?.click()} disabled={uploadingFile} style={{ background: 'rgba(108,92,231,0.1)', border: '0.5px solid rgba(108,92,231,0.3)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: '#6C5CE7', cursor: 'pointer' }}>
+                    {uploadingFile ? 'Uploading...' : '+ Attach file'}
+                  </button>
+                </div>
               </div>
+              {attachments.length === 0 ? (
+                <div style={{ fontSize: '12px', color: theme.textMuted, padding: '10px', textAlign: 'center', border: `0.5px dashed ${theme.cardBorder}`, borderRadius: '8px' }}>
+                  No attachments yet. Click "+ Attach file" to add one.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {attachments.map((att) => (
+                    <div key={att.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: theme.bg, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>{getFileIcon(att.original_name)}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <a href={att.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: 500, color: '#6C5CE7', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {att.original_name}
+                        </a>
+                        <div style={{ fontSize: '10px', color: theme.textMuted }}>{formatFileSize(att.file_size)} · {att.uploaded_by_name} · {formatTime(att.created_at)}</div>
+                      </div>
+                      <button onClick={() => handleDeleteAttachment(att.id)} style={{ background: 'transparent', border: 'none', color: theme.textMuted, cursor: 'pointer', fontSize: '14px', padding: '2px' }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-              <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: theme.textMuted, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Comments <span style={{ background: 'rgba(128,128,128,0.15)', borderRadius: '10px', padding: '0 6px' }}>{comments.length}</span>
+              </div>
+              <div style={{ maxHeight: '180px', overflowY: 'auto', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {loadingComments ? (
-                  <div style={{ fontSize: '12px', color: theme.textMuted, textAlign: 'center', padding: '10px' }}>Loading comments...</div>
+                  <div style={{ fontSize: '12px', color: theme.textMuted, textAlign: 'center', padding: '10px' }}>Loading...</div>
                 ) : comments.length === 0 ? (
-                  <div style={{ fontSize: '12px', color: theme.textMuted, textAlign: 'center', padding: '10px' }}>No comments yet. Be the first to comment.</div>
+                  <div style={{ fontSize: '12px', color: theme.textMuted, textAlign: 'center', padding: '10px' }}>No comments yet.</div>
                 ) : (
                   comments.map((comment) => (
                     <div key={comment.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
@@ -382,20 +479,12 @@ export default function Board() {
                 )}
                 <div ref={commentsEndRef} />
               </div>
-
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#E8572A', color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {user?.name?.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, position: 'relative' }}>
-                  <input
-                    type="text"
-                    placeholder="Add a comment... use @name to mention"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }}
-                    style={{ width: '100%', background: theme.input, border: `0.5px solid ${theme.inputBorder}`, borderRadius: '8px', padding: '8px 40px 8px 12px', fontSize: '12px', color: theme.text, outline: 'none', fontFamily: 'Inter, sans-serif' }}
-                  />
+                  <input type="text" placeholder="Add a comment... use @name to mention" value={newComment} onChange={(e) => setNewComment(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }} style={{ width: '100%', background: theme.input, border: `0.5px solid ${theme.inputBorder}`, borderRadius: '8px', padding: '8px 40px 8px 12px', fontSize: '12px', color: theme.text, outline: 'none', fontFamily: 'Inter, sans-serif' }} />
                   <button onClick={handleAddComment} style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', background: '#E8572A', border: 'none', borderRadius: '5px', width: '24px', height: '24px', color: '#fff', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>↑</button>
                 </div>
               </div>

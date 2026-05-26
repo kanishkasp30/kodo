@@ -29,37 +29,31 @@ app.use('/api/activity', require('./routes/activity'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/attachments', require('./routes/attachments'));
 
 const connectedUsers = {};
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-
   socket.on('join-workspace', (workspaceId) => {
     socket.join(`workspace-${workspaceId}`);
   });
-
   socket.on('join-project', (projectId) => {
     socket.join(`project-${projectId}`);
   });
-
   socket.on('join-user', (userId) => {
     socket.join(`user-${userId}`);
   });
-
   socket.on('user-presence', (data) => {
     connectedUsers[socket.id] = data;
     io.to(`project-${data.projectId}`).emit('presence-update', Object.values(connectedUsers));
   });
-
   socket.on('task-update', (data) => {
     socket.to(`project-${data.projectId}`).emit('task-updated', data);
   });
-
   socket.on('send-notification', (data) => {
     io.to(`user-${data.userId}`).emit('new-notification', data);
   });
-
   socket.on('disconnect', () => {
     delete connectedUsers[socket.id];
     io.emit('presence-update', Object.values(connectedUsers));
