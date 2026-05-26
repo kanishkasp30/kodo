@@ -5,7 +5,7 @@ import { getTasks, createTask, updateTask, deleteTask, getWorkspaceMembers, getP
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 
-const socket = io('http://localhost:5000');
+const socket = io('https://kodo-production.up.railway.app');
 
 const COLUMNS = [
   { key: 'todo', label: 'To Do', color: '#9B9890' },

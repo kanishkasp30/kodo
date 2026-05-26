@@ -43,7 +43,7 @@ export default function Login() {
       const res = await login({ email, password });
       loginUser(res.data.user, res.data.token);
       toast.success(`Welcome back, ${res.data.user.name.split(' ')[0]}`);
-      const workspaces = await fetch('http://localhost:5000/api/workspaces/my', {
+      const workspaces = await fetch('https://kodo-production.up.railway.app/api/workspaces/my', {
         headers: { Authorization: `Bearer ${res.data.token}` }
       }).then(r => r.json());
       if (workspaces.length === 0) {

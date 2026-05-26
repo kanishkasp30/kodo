@@ -41,7 +41,7 @@ router.post('/task/:task_id', auth, upload.single('file'), async (req, res) => {
     return res.status(400).json({ message: 'No file uploaded' });
   }
   try {
-    const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+    const fileUrl = `https://kodo-production.up.railway.app/uploads/${req.file.filename}`;
     const result = await pool.query(
       `INSERT INTO task_attachments (task_id, filename, original_name, file_url, file_size, uploaded_by)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,

@@ -25,7 +25,7 @@ export default function Wiki() {
 
   const fetchPages = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/wiki/project/${projectId}`, {
+      const res = await fetch(`https://kodo-production.up.railway.app/api/wiki/project/${projectId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -41,7 +41,7 @@ export default function Wiki() {
   const fetchHistory = async (pageId) => {
     setLoadingHistory(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/wiki/${pageId}/history`, {
+      const res = await fetch(`https://kodo-production.up.railway.app/api/wiki/${pageId}/history`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -56,7 +56,7 @@ export default function Wiki() {
   const handleCreate = async () => {
     if (!newTitle.trim()) { toast.error('Enter a page title'); return; }
     try {
-      const res = await fetch('http://localhost:5000/api/wiki', {
+      const res = await fetch('https://kodo-production.up.railway.app/api/wiki', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({
@@ -80,7 +80,7 @@ export default function Wiki() {
 
   const handleSave = async () => {
     try {
-      await fetch(`http://localhost:5000/api/wiki/${selected.id}`, {
+      await fetch(`https://kodo-production.up.railway.app/api/wiki/${selected.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ title: editForm.title, content: editForm.content }),
@@ -97,7 +97,7 @@ export default function Wiki() {
   const handleDelete = async () => {
     if (!window.confirm('Delete this page?')) return;
     try {
-      await fetch(`http://localhost:5000/api/wiki/${selected.id}`, {
+      await fetch(`https://kodo-production.up.railway.app/api/wiki/${selected.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
@@ -116,7 +116,7 @@ export default function Wiki() {
     try {
       const formData = new FormData();
       formData.append('image', file);
-      const response = await fetch('http://localhost:5000/api/upload/image', {
+      const response = await fetch('https://kodo-production.up.railway.app/api/upload/image', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: formData,

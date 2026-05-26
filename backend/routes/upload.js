@@ -33,7 +33,7 @@ router.post('/image', auth, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
-  const imageUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+  const imageUrl = `https://kodo-production.up.railway.app/uploads/${req.file.filename}`;
   res.json({ url: imageUrl, filename: req.file.filename });
 });
 

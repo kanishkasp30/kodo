@@ -20,7 +20,7 @@ export default function Profile() {
 
   const fetchFullProfile = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/users/me', {
+      const res = await fetch('https://kodo-production.up.railway.app/api/users/me', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
@@ -39,7 +39,7 @@ export default function Profile() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/users/profile', {
+      const res = await fetch('https://kodo-production.up.railway.app/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ export default function Profile() {
     try {
       const formData = new FormData();
       formData.append('avatar', file);
-      const res = await fetch('http://localhost:5000/api/users/avatar', {
+      const res = await fetch('https://kodo-production.up.railway.app/api/users/avatar', {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: formData,
