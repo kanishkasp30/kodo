@@ -4,6 +4,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 require('dotenv').config();
+const passport = require('./config/passport');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,6 +14,7 @@ const io = new Server(server, {
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(passport.initialize());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', require('./routes/auth'));
