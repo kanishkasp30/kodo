@@ -20,7 +20,7 @@ export default function OAuthSuccess() {
       loginUser(user, token);
       toast.success(`Welcome, ${name.split(' ')[0]}`);
 
-      fetch('https://kodo-production.up.railway.app/api/workspaces/my', {
+      fetch('https://stingy-spew-spout.ngrok-free.dev/api/workspaces/my', {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((r) => r.json())
@@ -55,3 +55,5 @@ export default function OAuthSuccess() {
     </div>
   );
 }
+
+

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 
-const socket = io('https://kodo-production.up.railway.app');
+const socket = io('https://stingy-spew-spout.ngrok-free.dev');
 
 export default function Notifications() {
   const { theme } = useTheme();
@@ -15,7 +15,7 @@ export default function Notifications() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch('https://kodo-production.up.railway.app/api/notifications', {
+      const res = await fetch('https://stingy-spew-spout.ngrok-free.dev/api/notifications', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
@@ -42,7 +42,7 @@ export default function Notifications() {
 
   const markAllRead = async () => {
     try {
-      await fetch('https://kodo-production.up.railway.app/api/notifications/read-all', {
+      await fetch('https://stingy-spew-spout.ngrok-free.dev/api/notifications/read-all', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
@@ -55,7 +55,7 @@ export default function Notifications() {
 
   const markRead = async (id) => {
     try {
-      await fetch(`https://kodo-production.up.railway.app/api/notifications/${id}/read`, {
+      await fetch(`https://stingy-spew-spout.ngrok-free.dev/api/notifications/${id}/read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
@@ -67,7 +67,7 @@ export default function Notifications() {
 
   const sendTestNotification = async () => {
     try {
-      const res = await fetch('https://kodo-production.up.railway.app/api/notifications', {
+      const res = await fetch('https://stingy-spew-spout.ngrok-free.dev/api/notifications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,3 +225,5 @@ export default function Notifications() {
     </div>
   );
 }
+
+

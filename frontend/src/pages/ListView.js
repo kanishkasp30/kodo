@@ -5,7 +5,7 @@ import { getTasks, createTask, updateTask, deleteTask, getWorkspaceMembers, getP
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 
-const socket = io('https://kodo-production.up.railway.app');
+const socket = io('https://stingy-spew-spout.ngrok-free.dev');
 
 const COLUMNS = [
   { key: 'todo', label: 'To Do', color: '#9B9890' },
@@ -320,3 +320,5 @@ export default function ListView() {
     </div>
   );
 }
+
+

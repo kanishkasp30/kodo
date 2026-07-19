@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getMyWorkspaces, getProjects } from '../utils/api';
 import io from 'socket.io-client';
 
-const socket = io('https://kodo-production.up.railway.app');
+const socket = io('https://stingy-spew-spout.ngrok-free.dev');
 
 const KodoLogo = ({ size = 36, theme }) => (
   <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
@@ -45,7 +45,7 @@ export default function Layout() {
 
   const fetchUnreadCount = async () => {
     try {
-      const res = await fetch('https://kodo-production.up.railway.app/api/notifications', {
+      const res = await fetch('https://stingy-spew-spout.ngrok-free.dev/api/notifications', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
@@ -262,3 +262,5 @@ export default function Layout() {
     </div>
   );
 }
+
+

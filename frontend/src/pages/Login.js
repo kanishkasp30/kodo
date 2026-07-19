@@ -22,7 +22,7 @@ const greetings = [
   'Ready to build?',
   'Let\'s get coding',
 ];
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = 'https://stingy-spew-spout.ngrok-free.dev';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -35,30 +35,35 @@ export default function Login() {
   const greeting = greetings[Math.floor(Math.random() * greetings.length)];
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return;
+  e.preventDefault();
+  if (!email || !password) {
+    toast.error('Please fill in all fields');
+    return;
+  }
+  setLoading(true);
+  try {
+    const res = await login({ email, password });
+    loginUser(res.data.user, res.data.token, keepSignedIn);
+    toast.success(`Welcome back, ${res.data.user.name.split(' ')[0]}`);
+    const workspaces = await fetch('https://stingy-spew-spout.ngrok-free.dev/api/workspaces/my', {
+      headers: { Authorization: `Bearer ${res.data.token}` }
+    }).then(r => r.json());
+    if (workspaces.length === 0) {
+      navigate('/onboarding');
+    } else {
+      navigate('/app');
     }
-    setLoading(true);
-    try {
-      const res = await login({ email, password });
-      loginUser(res.data.user, res.data.token, keepSignedIn);
-      toast.success(`Welcome back, ${res.data.user.name.split(' ')[0]}`);
-      const workspaces = await fetch('https://kodo-production.up.railway.app/api/workspaces/my', {
-        headers: { Authorization: `Bearer ${res.data.token}` }
-      }).then(r => r.json());
-      if (workspaces.length === 0) {
-        navigate('/onboarding');
-      } else {
-        navigate('/app');
-      }
-    } catch (err) {
+  } catch (err) {
+    if (err.response?.data?.needsVerification) {
+      toast.error('Please verify your email first');
+      navigate('/verify-otp', { state: { email: err.response.data.email } });
+    } else {
       toast.error(err.response?.data?.message || 'Login failed');
-    } finally {
-      setLoading(false);
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   const inputStyle = {
     width: '100%',
@@ -312,3 +317,5 @@ export default function Login() {
     </div>
   );
 }
+
+

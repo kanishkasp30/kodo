@@ -34,11 +34,11 @@ passport.use(
           }
         } else {
           const inserted = await pool.query(
-            `INSERT INTO users (name, email, google_id, role)
-             VALUES ($1, $2, $3, 'member')
-             RETURNING *`,
-            [name, email, googleId]
-          );
+  `INSERT INTO users (name, email, google_id, role, is_verified)
+   VALUES ($1, $2, $3, 'member', true)
+   RETURNING *`,
+  [name, email, googleId]
+);
           user = inserted.rows[0];
         }
 
@@ -85,11 +85,11 @@ passport.use(
           }
         } else {
           const inserted = await pool.query(
-            `INSERT INTO users (name, email, github_id, role)
-             VALUES ($1, $2, $3, 'member')
-             RETURNING *`,
-            [name, email, githubId]
-          );
+  `INSERT INTO users (name, email, github_id, role, is_verified)
+   VALUES ($1, $2, $3, 'member', true)
+   RETURNING *`,
+  [name, email, githubId]
+);
           user = inserted.rows[0];
         }
 

@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
+const API_BASE = 'https://stingy-spew-spout.ngrok-free.dev/api';
+
 export default function Profile() {
   const { theme } = useTheme();
-  const { user, loginUser } = useAuth();
+  const { user, loginUser, logoutUser } = useAuth();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [fullUser, setFullUser] = useState(null);
   const [form, setForm] = useState({ name: '', bio: '', github_url: '', skills: [] });
@@ -14,14 +18,21 @@ export default function Profile() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef(null);
 
+  const [workspace, setWorkspace] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [selectedNewOwner, setSelectedNewOwner] = useState('');
+  const [leaving, setLeaving] = useState(false);
+
   useEffect(() => {
     fetchFullProfile();
+    fetchWorkspaceInfo();
   }, []);
 
   const fetchFullProfile = async () => {
     try {
-      const res = await fetch('https://kodo-production.up.railway.app/api/users/me', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      const res = await fetch(`${API_BASE}/users/me`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` },
       });
       const data = await res.json();
       setFullUser(data);
@@ -36,14 +47,38 @@ export default function Profile() {
     }
   };
 
+  const fetchWorkspaceInfo = async () => {
+    const stored = localStorage.getItem('currentWorkspace');
+    if (!stored) return;
+    try {
+      const parsedWorkspace = JSON.parse(stored);
+      const workspaceId = parsedWorkspace.id;
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+
+      const wsRes = await fetch(`${API_BASE}/workspaces/${workspaceId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const wsData = await wsRes.json();
+      setWorkspace(wsData);
+
+      const membersRes = await fetch(`${API_BASE}/workspaces/${workspaceId}/members`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const membersData = await membersRes.json();
+      setMembers(membersData);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch('https://kodo-production.up.railway.app/api/users/profile', {
+      const res = await fetch(`${API_BASE}/users/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`,
         },
         body: JSON.stringify(form),
       });
@@ -51,7 +86,7 @@ export default function Profile() {
       if (data.user) {
         setFullUser(data.user);
         const updatedUser = { ...user, ...data.user };
-        loginUser(updatedUser, localStorage.getItem('token'));
+        loginUser(updatedUser, localStorage.getItem('token') || sessionStorage.getItem('token'));
         toast.success('Profile updated');
         setEditing(false);
       }
@@ -69,16 +104,16 @@ export default function Profile() {
     try {
       const formData = new FormData();
       formData.append('avatar', file);
-      const res = await fetch('https://kodo-production.up.railway.app/api/users/avatar', {
+      const res = await fetch(`${API_BASE}/users/avatar`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}` },
         body: formData,
       });
       const data = await res.json();
       if (data.user) {
         setFullUser(data.user);
         const updatedUser = { ...user, ...data.user };
-        loginUser(updatedUser, localStorage.getItem('token'));
+        loginUser(updatedUser, localStorage.getItem('token') || sessionStorage.getItem('token'));
         toast.success('Profile picture updated');
       }
     } catch (err) {
@@ -98,6 +133,54 @@ export default function Profile() {
 
   const removeSkill = (skill) => {
     setForm({ ...form, skills: form.skills.filter(s => s !== skill) });
+  };
+
+  const isOwner = workspace && fullUser && workspace.owner_id === fullUser.id;
+  const otherMembers = members.filter((m) => m.id !== fullUser?.id);
+
+  const handleLeaveWorkspace = async () => {
+    if (isOwner && otherMembers.length > 0 && !selectedNewOwner) {
+      toast.error('Please select a member to transfer ownership to');
+      return;
+    }
+    setLeaving(true);
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const stored = localStorage.getItem('currentWorkspace');
+      const workspaceId = JSON.parse(stored).id;
+
+      if (isOwner && otherMembers.length > 0) {
+        await fetch(`${API_BASE}/workspaces/${workspaceId}/transfer-ownership`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ newOwnerId: selectedNewOwner }),
+        });
+      }
+
+      const res = await fetch(`${API_BASE}/workspaces/${workspaceId}/leave`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || 'Failed to leave workspace');
+        setLeaving(false);
+        return;
+      }
+
+      localStorage.removeItem('currentWorkspace');
+      toast.success(data.deleted ? 'Workspace deleted' : 'You left the workspace');
+      navigate('/onboarding');
+    } catch (err) {
+      toast.error('Failed to leave workspace');
+    } finally {
+      setLeaving(false);
+      setShowLeaveModal(false);
+    }
   };
 
   const avatarColors = ['#E8572A', '#0D9E8A', '#6C5CE7', '#F0A500', '#9B7FA6'];
@@ -242,7 +325,7 @@ export default function Profile() {
         )}
       </div>
 
-      <div style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '16px', padding: '20px' }}>
+      <div style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
         <div style={{ fontSize: '13px', fontWeight: 600, color: theme.text, marginBottom: '14px' }}>Account details</div>
         {[
           { label: 'Email', value: displayUser?.email },
@@ -260,6 +343,107 @@ export default function Profile() {
           </div>
         ))}
       </div>
+
+      {workspace && (
+        <div style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: '16px', padding: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: theme.text, marginBottom: '4px' }}>Current workspace</div>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: theme.text, marginBottom: '4px' }}>{workspace.name}</div>
+          <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '16px' }}>
+            {isOwner ? 'You own this workspace' : 'You are a member of this workspace'} · {members.length} member{members.length !== 1 ? 's' : ''}
+          </div>
+          <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '16px', lineHeight: 1.6 }}>
+            You can only belong to one workspace at a time. To switch, you'll need to leave this one first.
+          </div>
+          <button
+            onClick={() => setShowLeaveModal(true)}
+            style={{
+              background: 'rgba(232,87,42,0.1)',
+              border: '0.5px solid rgba(232,87,42,0.3)',
+              borderRadius: '8px',
+              padding: '8px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#E8572A',
+              cursor: 'pointer',
+            }}
+          >
+            Leave workspace
+          </button>
+        </div>
+      )}
+
+      {showLeaveModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }}
+          onClick={() => setShowLeaveModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: theme.card, border: `0.5px solid ${theme.cardBorder}`,
+              borderRadius: '16px', padding: '28px', maxWidth: '420px', width: '90%',
+            }}
+          >
+            <div style={{ fontFamily: 'Fraunces, serif', fontSize: '20px', fontWeight: 700, color: theme.text, marginBottom: '10px' }}>
+              Leave "{workspace?.name}"?
+            </div>
+
+            {isOwner && otherMembers.length > 0 ? (
+              <>
+                <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '14px', lineHeight: 1.6 }}>
+                  You're the owner. Choose a member to transfer ownership to before leaving.
+                </div>
+                <select
+                  value={selectedNewOwner}
+                  onChange={(e) => setSelectedNewOwner(e.target.value)}
+                  style={{ ...inputStyle, colorScheme: 'dark', marginBottom: '16px' }}
+                >
+                  <option value="">Select new owner...</option>
+                  {otherMembers.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
+                  ))}
+                </select>
+              </>
+            ) : isOwner && otherMembers.length === 0 ? (
+              <div style={{ fontSize: '13px', color: '#E8572A', marginBottom: '16px', lineHeight: 1.6 }}>
+                You're the only member. Leaving will permanently delete this workspace and all its data.
+              </div>
+            ) : (
+              <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '16px', lineHeight: 1.6 }}>
+                You'll need an invite code to join a different workspace afterward.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleLeaveWorkspace}
+                disabled={leaving}
+                style={{
+                  flex: 1, background: '#E8572A', border: 'none', borderRadius: '8px',
+                  padding: '10px', fontSize: '13px', fontWeight: 700, color: '#fff',
+                  cursor: leaving ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {leaving ? 'Leaving...' : 'Yes, leave'}
+              </button>
+              <button
+                onClick={() => setShowLeaveModal(false)}
+                style={{
+                  flex: 1, background: 'transparent', border: `0.5px solid ${theme.cardBorder}`,
+                  borderRadius: '8px', padding: '10px', fontSize: '13px', color: theme.textSecondary, cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+

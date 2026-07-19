@@ -6,7 +6,7 @@ import { getTasks, createTask, updateTask, deleteTask, getWorkspaceMembers, getP
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 
-const socket = io('https://kodo-production.up.railway.app');
+const socket = io('https://stingy-spew-spout.ngrok-free.dev');
 
 const COLUMNS = [
   { key: 'todo', label: 'To Do', color: '#9B9890' },
@@ -141,7 +141,7 @@ export default function Board() {
 
   const fetchAttachments = async (taskId) => {
     try {
-      const res = await fetch(`https://kodo-production.up.railway.app/api/attachments/task/${taskId}`, {
+      const res = await fetch(`https://stingy-spew-spout.ngrok-free.dev/api/attachments/task/${taskId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const data = await res.json();
@@ -158,7 +158,7 @@ export default function Board() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch(`https://kodo-production.up.railway.app/api/attachments/task/${selectedTask.id}`, {
+      const res = await fetch(`https://stingy-spew-spout.ngrok-free.dev/api/attachments/task/${selectedTask.id}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: formData,
@@ -175,7 +175,7 @@ export default function Board() {
 
   const handleDeleteAttachment = async (id) => {
     try {
-      await fetch(`https://kodo-production.up.railway.app/api/attachments/${id}`, {
+      await fetch(`https://stingy-spew-spout.ngrok-free.dev/api/attachments/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
@@ -511,3 +511,5 @@ export default function Board() {
     </div>
   );
 }
+
+

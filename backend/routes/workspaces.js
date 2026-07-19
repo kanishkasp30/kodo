@@ -93,5 +93,84 @@ router.get('/:id/members', auth, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
+router.post('/:id/leave', auth, async (req, res) => {
+  const workspaceId = req.params.id;
+  try {
+    const memberCheck = await pool.query(
+      'SELECT * FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+      [workspaceId, req.user.id]
+    );
+
+    if (memberCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'You are not a member of this workspace' });
+    }
+
+    const member = memberCheck.rows[0];
+    const memberCountResult = await pool.query(
+      'SELECT COUNT(*) FROM workspace_members WHERE workspace_id = $1',
+      [workspaceId]
+    );
+    const memberCount = parseInt(memberCountResult.rows[0].count);
+
+    if (member.role === 'owner') {
+      if (memberCount === 1) {
+        // Owner is the only member - delete the whole workspace
+        await pool.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
+        return res.json({ message: 'Workspace deleted since you were the only member', deleted: true });
+      } else {
+        return res.status(400).json({
+          message: 'You must transfer ownership to another member before leaving',
+          needsTransfer: true,
+        });
+      }
+    }
+
+    // Regular member leaving
+    await pool.query(
+      'DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+      [workspaceId, req.user.id]
+    );
+
+    res.json({ message: 'You have left the workspace', deleted: false });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+router.post('/:id/transfer-ownership', auth, async (req, res) => {
+  const workspaceId = req.params.id;
+  const { newOwnerId } = req.body;
+  try {
+    const workspace = await pool.query('SELECT * FROM workspaces WHERE id = $1', [workspaceId]);
+    if (workspace.rows.length === 0) {
+      return res.status(404).json({ message: 'Workspace not found' });
+    }
+    if (workspace.rows[0].owner_id !== req.user.id) {
+      return res.status(403).json({ message: 'Only the current owner can transfer ownership' });
+    }
+
+    const newOwnerCheck = await pool.query(
+      'SELECT * FROM workspace_members WHERE workspace_id = $1 AND user_id = $2',
+      [workspaceId, newOwnerId]
+    );
+    if (newOwnerCheck.rows.length === 0) {
+      return res.status(404).json({ message: 'New owner must be a member of this workspace' });
+    }
+
+    await pool.query('UPDATE workspaces SET owner_id = $1 WHERE id = $2', [newOwnerId, workspaceId]);
+    await pool.query(
+      "UPDATE workspace_members SET role = 'owner' WHERE workspace_id = $1 AND user_id = $2",
+      [workspaceId, newOwnerId]
+    );
+    await pool.query(
+      "UPDATE workspace_members SET role = 'member' WHERE workspace_id = $1 AND user_id = $2",
+      [workspaceId, req.user.id]
+    );
+
+    res.json({ message: 'Ownership transferred successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 
 module.exports = router;

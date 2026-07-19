@@ -21,6 +21,7 @@ import Notifications from './pages/Notifications';
 import ProPlan from './pages/ProPlan';
 import Layout from './components/Layout';
 import OAuthSuccess from './pages/OAuthSuccess';
+import VerifyOtp from './pages/VerifyOtp';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ function AppContent() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/onboarding" element={
             <PrivateRoute><Onboarding /></PrivateRoute>
@@ -92,3 +94,5 @@ function App() {
 }
 
 export default App;
+
+

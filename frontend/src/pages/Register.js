@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { register, login } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const BACKEND_URL = 'http://localhost:5000';
+const BACKEND_URL = 'https://stingy-spew-spout.ngrok-free.dev';
 
 const getPasswordStrength = (password) => {
   if (!password) return { score: 0, label: '', color: '' };
@@ -37,33 +37,31 @@ export default function Register() {
 
   const strength = getPasswordStrength(form.password);
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    if (!form.name || !form.email || !form.password || !form.confirmPassword) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-    if (strength.score < 3) {
-      toast.error('Your password is too weak. Please create a stronger password before signing up.');
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    setLoading(true);
-    try {
-      await register({ name: form.name, email: form.email, password: form.password, role: form.role });
-      const res = await login({ email: form.email, password: form.password });
-      loginUser(res.data.user, res.data.token);
-      toast.success(`Welcome to Kōdo, ${res.data.user.name.split(' ')[0]}`);
-      navigate('/onboarding');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleRegister = async (e) => {
+  e.preventDefault();
+  if (!form.name || !form.email || !form.password || !form.confirmPassword) {
+    toast.error('Please fill in all fields');
+    return;
+  }
+  if (strength.score < 3) {
+    toast.error('Your password is too weak. Please create a stronger password before signing up.');
+    return;
+  }
+  if (form.password !== form.confirmPassword) {
+    toast.error('Passwords do not match');
+    return;
+  }
+  setLoading(true);
+  try {
+    const res = await register({ name: form.name, email: form.email, password: form.password, role: form.role });
+toast.success('OTP sent to your email');
+navigate('/verify-otp', { state: { email: form.email, expiresIn: res.data.expiresIn || 600 } });
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Registration failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const inputStyle = {
     width: '100%',
@@ -331,3 +329,5 @@ export default function Register() {
     </div>
   );
 }
+
+

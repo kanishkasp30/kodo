@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://kodo-production.up.railway.app/api',
+  baseURL: 'https://stingy-spew-spout.ngrok-free.dev/api',
 });
 
 API.interceptors.request.use((req) => {
@@ -14,6 +14,8 @@ API.interceptors.request.use((req) => {
 
 export const register = (data) => API.post('/auth/register', data);
 export const login = (data) => API.post('/auth/login', data);
+export const verifyOtp = (data) => API.post('/auth/verify-otp', data);
+export const resendOtp = (data) => API.post('/auth/resend-otp', data);
 
 export const createWorkspace = (data) => API.post('/workspaces', data);
 export const getMyWorkspaces = () => API.get('/workspaces/my');
@@ -52,3 +54,5 @@ export const breakdownFeature = (data) => API.post('/ai/breakdown', data);
 export const reviewCode = (data) => API.post('/ai/review-code', data);
 
 export default API;
+
+
