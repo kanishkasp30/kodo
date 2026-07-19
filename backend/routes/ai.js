@@ -5,23 +5,23 @@ const pool = require('../db');
 require('dotenv').config();
 
 const callAI = async (messages) => {
-  console.log('Calling Featherless API with', messages.length, 'messages');
-  const response = await fetch('https://api.featherless.ai/v1/chat/completions', {
+  console.log('Calling Groq API with', messages.length, 'messages');
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.FEATHERLESS_API_KEY}`,
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'mistralai/Mistral-7B-Instruct-v0.3',
+      model: 'llama-3.3-70b-versatile',
       messages,
       max_tokens: 1000,
       temperature: 0.75,
     }),
   });
   const data = await response.json();
-  console.log('Featherless response status:', response.status);
-  console.log('Featherless data:', JSON.stringify(data).slice(0, 300));
+  console.log('Groq response status:', response.status);
+  console.log('Groq data:', JSON.stringify(data).slice(0, 300));
   if (!data.choices || !data.choices[0]) {
     throw new Error('No choices in response: ' + JSON.stringify(data));
   }
