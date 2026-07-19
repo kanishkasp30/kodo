@@ -5,7 +5,7 @@ import { getTasks, createTask, updateTask, deleteTask, getWorkspaceMembers, getP
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 
-const socket = io('https://stingy-spew-spout.ngrok-free.dev');
+const socket = io('https://kodo-1jlt.onrender.com');
 
 const PRIORITIES = [
   { label: 'Critical', value: 'Critical', color: '#E8572A' },
@@ -435,5 +435,6 @@ export default function CalendarView() {
     </div>
   );
 }
+
 
 

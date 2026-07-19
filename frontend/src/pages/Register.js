@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { register, login } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const BACKEND_URL = 'https://stingy-spew-spout.ngrok-free.dev';
+const BACKEND_URL = 'https://kodo-1jlt.onrender.com';
 
 const getPasswordStrength = (password) => {
   if (!password) return { score: 0, label: '', color: '' };
@@ -329,5 +329,6 @@ navigate('/verify-otp', { state: { email: form.email, expiresIn: res.data.expire
     </div>
   );
 }
+
 
 

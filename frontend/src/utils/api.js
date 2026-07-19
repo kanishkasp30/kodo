@@ -1,12 +1,8 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://stingy-spew-spout.ngrok-free.dev/api',
-  headers: {
-    'ngrok-skip-browser-warning': 'true',
-  },
+  baseURL: 'https://kodo-1jlt.onrender.com/api',
 });
-
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -57,5 +53,6 @@ export const breakdownFeature = (data) => API.post('/ai/breakdown', data);
 export const reviewCode = (data) => API.post('/ai/review-code', data);
 
 export default API;
+
 
 

@@ -24,9 +24,9 @@ export default function Activity() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [activityRes, projectsRes, membersRes] = await Promise.all([
-        fetch(`https://stingy-spew-spout.ngrok-free.dev/api/activity/workspace/${currentWorkspace.id}`, { headers }),
-        fetch(`https://stingy-spew-spout.ngrok-free.dev/api/projects/workspace/${currentWorkspace.id}`, { headers }),
-        fetch(`https://stingy-spew-spout.ngrok-free.dev/api/workspaces/${currentWorkspace.id}/members`, { headers }),
+        fetch(`https://kodo-1jlt.onrender.com/api/activity/workspace/${currentWorkspace.id}`, { headers }),
+        fetch(`https://kodo-1jlt.onrender.com/api/projects/workspace/${currentWorkspace.id}`, { headers }),
+        fetch(`https://kodo-1jlt.onrender.com/api/workspaces/${currentWorkspace.id}/members`, { headers }),
       ]);
 
       const activityData = await activityRes.json();
@@ -207,5 +207,6 @@ export default function Activity() {
     </div>
   );
 }
+
 
 

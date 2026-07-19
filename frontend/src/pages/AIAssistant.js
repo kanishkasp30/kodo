@@ -52,7 +52,7 @@ export default function AIAssistant() {
   };
 
   const callAuraChat = async (message) => {
-    const response = await fetch('https://stingy-spew-spout.ngrok-free.dev/api/ai/chat', {
+    const response = await fetch('https://kodo-1jlt.onrender.com/api/ai/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ export default function AIAssistant() {
     setLoading(true);
     addMessage('user', `Review PR: ${prUrl}`);
     try {
-      const response = await fetch('https://stingy-spew-spout.ngrok-free.dev/api/ai/review-pr', {
+      const response = await fetch('https://kodo-1jlt.onrender.com/api/ai/review-pr', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -363,5 +363,6 @@ export default function AIAssistant() {
     </div>
   );
 }
+
 
 

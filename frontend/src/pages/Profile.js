@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const API_BASE = 'https://stingy-spew-spout.ngrok-free.dev/api';
+const API_BASE = 'https://kodo-1jlt.onrender.com/api';
 
 export default function Profile() {
   const { theme } = useTheme();
@@ -445,5 +445,6 @@ export default function Profile() {
     </div>
   );
 }
+
 
 
