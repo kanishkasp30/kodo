@@ -4,27 +4,18 @@ const pool = require('../db');
 const auth = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
-const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../uploads'));
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `avatar-${Date.now()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'kodo-avatars',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
   },
 });
 
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Images only'), false);
-  },
-  limits: { fileSize: 3 * 1024 * 1024 },
-});
+const upload = multer({ storage, limits: { fileSize: 3 * 1024 * 1024 } });
 
 router.get('/me', auth, async (req, res) => {
   try {
@@ -57,7 +48,7 @@ router.post('/avatar', auth, upload.single('avatar'), async (req, res) => {
     return res.status(400).json({ message: 'No file uploaded' });
   }
   try {
-    const avatarUrl = `https://kodo-1jlt.onrender.com/uploads/${req.file.filename}`;
+    const avatarUrl = req.file.path;
     const result = await pool.query(
       'UPDATE users SET avatar_url=$1 WHERE id=$2 RETURNING id, name, email, role, bio, github_url, skills, avatar_url, created_at',
       [avatarUrl, req.user.id]
