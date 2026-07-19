@@ -57,7 +57,7 @@ router.post('/avatar', auth, upload.single('avatar'), async (req, res) => {
     return res.status(400).json({ message: 'No file uploaded' });
   }
   try {
-    const avatarUrl = `https://kodo-production.up.railway.app/uploads/${req.file.filename}`;
+    const avatarUrl = `https://kodo-1jlt.onrender.com/uploads/${req.file.filename}`;
     const result = await pool.query(
       'UPDATE users SET avatar_url=$1 WHERE id=$2 RETURNING id, name, email, role, bio, github_url, skills, avatar_url, created_at',
       [avatarUrl, req.user.id]

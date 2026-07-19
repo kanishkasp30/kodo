@@ -16,11 +16,11 @@ router.post('/register', async (req, res) => {
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, password, is_verified, otp_code, otp_expires_at)
-       VALUES ($1, $2, $3, false, $4, $5)
-       RETURNING id, name, email, role`,
-      [name, email, hashed, otp, otpExpiry]
-    );
+  `INSERT INTO users (name, email, password, is_verified, otp_code, otp_expires_at)
+   VALUES ($1, $2, $3, false, $4, $5)
+   RETURNING id, name, email, role`,
+  [name, email, hashed, otp, otpExpiry]
+);
 
     try {
       await sendOTPEmail(email, otp, name);
