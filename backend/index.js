@@ -4,6 +4,13 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 require('dotenv').config();
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception (handled, not crashing):', err.message);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection (handled, not crashing):', err.message);
+});
 const passport = require('./config/passport');
 
 const app = express();
