@@ -1,17 +1,11 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 require('dotenv').config();
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendOTPEmail = async (toEmail, otp, name) => {
-  const mailOptions = {
-    from: `"Kōdo" <${process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+    from: 'Kodo <onboarding@resend.dev>',
     to: toEmail,
     subject: 'Verify your Kōdo account',
     html: `
@@ -24,9 +18,7 @@ const sendOTPEmail = async (toEmail, otp, name) => {
         <p style="color: #666; font-size: 13px;">This code expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 };
 
 module.exports = { sendOTPEmail };
