@@ -12,7 +12,10 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] },
 });
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: 'https://kodo-jade.vercel.app',
+  credentials: true,
+}));
 app.use(express.json());
 app.use(passport.initialize());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

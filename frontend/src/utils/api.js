@@ -2,6 +2,9 @@ import axios from 'axios';
 
 const API = axios.create({
   baseURL: 'https://stingy-spew-spout.ngrok-free.dev/api',
+  headers: {
+    'ngrok-skip-browser-warning': 'true',
+  },
 });
 
 API.interceptors.request.use((req) => {

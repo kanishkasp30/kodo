@@ -7,7 +7,7 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected database error (handled):', err.message);
+  console.error('Unexpected database error (handled, not crashing):', err.message);
 });
 
 pool.connect((err) => {
